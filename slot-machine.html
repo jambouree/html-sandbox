@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Velvet Jackpot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --velvet: #1a0b2e;
+    --velvet-deep: #12081f;
+    --gold: #f2c94c;
+    --gold-dim: #a8842f;
+    --magenta: #ff2e63;
+    --cream: #f5efe3;
+    --win-green: #3ddc97;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; height:100%;
+    background: radial-gradient(ellipse at 50% 0%, #2a1348 0%, var(--velvet) 45%, var(--velvet-deep) 100%);
+    color: var(--cream);
+    font-family: 'Space Mono', monospace;
+    display:flex; align-items:center; justify-content:center;
+    overflow-x:hidden;
+  }
+  .stage{ width:100%; max-width:480px; padding:28px 20px 40px; position:relative; }
+
+  .marquee{
+    text-align:center; margin-bottom:18px;
+  }
+  .marquee h1{
+    font-family:'Bungee', cursive;
+    font-size: clamp(28px, 8vw, 40px);
+    margin:0;
+    color: var(--gold);
+    text-shadow: 0 0 12px rgba(242,201,76,0.45), 0 2px 0 #7a5a10;
+    letter-spacing: 1px;
+  }
+  .marquee p{
+    margin:6px 0 0;
+    font-size:11px;
+    letter-spacing:3px;
+    text-transform:uppercase;
+    color: var(--magenta);
+    opacity:0.85;
+  }
+
+  .cabinet{
+    background: linear-gradient(180deg, #2b1550, #180a2c);
+    border:3px solid var(--gold-dim);
+    border-radius:18px;
+    padding:22px 18px 26px;
+    box-shadow: 0 0 0 6px rgba(0,0,0,0.35) inset, 0 18px 40px rgba(0,0,0,0.5);
+    position:relative;
+  }
+  .bulbs{
+    position:absolute; inset:6px;
+    border-radius:14px;
+    pointer-events:none;
+    background-image: radial-gradient(circle, var(--gold) 0 2px, transparent 2.5px);
+    background-size: 26px 26px;
+    background-position: 0 0;
+    opacity:0.28;
+    mask: linear-gradient(#000,#000) content-box, linear-gradient(#000,#000);
+    mask-composite: exclude;
+    padding:2px;
+  }
+
+  .status-row{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:16px; font-size:12px; letter-spacing:1px;
+  }
+  .pill{
+    background: rgba(0,0,0,0.35);
+    border:1px solid rgba(242,201,76,0.35);
+    border-radius:999px;
+    padding:6px 14px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .pill b{ color:var(--gold); font-size:15px; }
+  .pill.credits b{ color: var(--win-green); }
+
+  .reels{
+    display:flex; gap:10px;
+    background: var(--velvet-deep);
+    border-radius:12px;
+    padding:14px 10px;
+    border: 2px solid rgba(0,0,0,0.6);
+    box-shadow: inset 0 6px 14px rgba(0,0,0,0.6);
+  }
+  .reel-window{
+    flex:1;
+    height:96px;
+    overflow:hidden;
+    border-radius:8px;
+    background: linear-gradient(180deg, #0d0518, #1c0e33 50%, #0d0518);
+    position:relative;
+    border:1px solid rgba(242,201,76,0.25);
+  }
+  .reel-window::before, .reel-window::after{
+    content:''; position:absolute; left:0; right:0; height:28px; pointer-events:none; z-index:2;
+  }
+  .reel-window::before{ top:0; background:linear-gradient(180deg, rgba(13,5,24,0.95), transparent); }
+  .reel-window::after{ bottom:0; background:linear-gradient(0deg, rgba(13,5,24,0.95), transparent); }
+  .reel-strip{
+    display:flex; flex-direction:column; align-items:center;
+    transition: transform 2.6s cubic-bezier(.15,.9,.25,1);
+  }
+  .symbol{
+    height:96px; display:flex; align-items:center; justify-content:center;
+    font-size:44px; flex-shrink:0;
+  }
+
+  .payline{
+    text-align:center; margin-top:8px; height:16px; font-size:11px;
+    color: var(--gold); letter-spacing:2px; opacity:0.7;
+  }
+
+  .message{
+    text-align:center;
+    min-height:26px;
+    margin: 14px 0 8px;
+    font-size:14px;
+    color: var(--cream);
+  }
+  .message.win{ color: var(--win-green); font-weight:bold; }
+  .message.lose{ color: rgba(245,239,227,0.55); }
+
+  .controls{
+    display:flex; gap:10px; margin-top:6px;
+  }
+  button{
+    font-family:'Space Mono', monospace;
+    font-weight:700;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    letter-spacing:1px;
+    transition: transform 0.12s ease, filter 0.12s ease;
+  }
+  button:active:not(:disabled){ transform: translateY(2px); }
+  button:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  .spin-btn{
+    flex:2;
+    background: linear-gradient(180deg, var(--magenta), #c5164a);
+    color: var(--cream);
+    font-size:16px;
+    padding:16px 0;
+    box-shadow: 0 6px 0 #8a0f36, 0 10px 18px rgba(255,46,99,0.25);
+  }
+  .spin-btn:hover:not(:disabled){ filter:brightness(1.08); }
+  .spin-btn:active:not(:disabled){ box-shadow: 0 2px 0 #8a0f36; }
+
+  .ad-btn{
+    flex:1.3;
+    background: linear-gradient(180deg, var(--gold), var(--gold-dim));
+    color: #241205;
+    font-size:12px;
+    padding:16px 6px;
+    box-shadow: 0 6px 0 #6e5620;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+  }
+  .ad-btn small{ font-weight:400; font-size:9px; opacity:0.75; letter-spacing:0.5px; }
+  .ad-btn:active:not(:disabled){ box-shadow: 0 2px 0 #6e5620; }
+
+  .footnote{
+    text-align:center; margin-top:16px; font-size:10px; opacity:0.4; letter-spacing:0.5px;
+  }
+
+  /* Ad overlay */
+  .overlay{
+    position:fixed; inset:0; background: rgba(5,2,10,0.88);
+    display:flex; align-items:center; justify-content:center;
+    z-index:50; opacity:0; pointer-events:none; transition: opacity 0.25s ease;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .ad-card{
+    width:90%; max-width:340px;
+    background: linear-gradient(180deg,#241040,#160822);
+    border:2px solid var(--gold-dim);
+    border-radius:16px;
+    padding:24px 20px;
+    text-align:center;
+  }
+  .ad-card .tag{
+    font-size:10px; letter-spacing:3px; color:var(--magenta); text-transform:uppercase; margin-bottom:10px;
+  }
+  .ad-mock{
+    background: repeating-linear-gradient(45deg, #3a2260, #3a2260 10px, #33205a 10px, #33205a 20px);
+    border-radius:10px; height:120px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Bungee', cursive; font-size:22px; color:var(--gold);
+    margin-bottom:16px; text-shadow:0 2px 0 rgba(0,0,0,0.4);
+  }
+  .ring-wrap{ display:flex; align-items:center; justify-content:center; gap:12px; }
+  svg.ring{ width:52px; height:52px; transform:rotate(-90deg); }
+  svg.ring circle{ fill:none; stroke-width:5; }
+  .ring-bg{ stroke: rgba(242,201,76,0.15); }
+  .ring-fg{ stroke: var(--gold); stroke-linecap:round; transition: stroke-dashoffset 1s linear; }
+  .ring-label{ font-size:20px; font-weight:bold; color:var(--gold); }
+  .skip-btn{
+    margin-top:18px; width:100%; padding:12px 0;
+    background: var(--win-green); color:#062018; font-size:13px;
+  }
+  .skip-btn:disabled{ background: rgba(255,255,255,0.08); color:rgba(255,255,255,0.4); }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="marquee">
+    <h1>VELVET JACKPOT</h1>
+    <p>No real money &middot; just for fun</p>
+  </div>
+
+  <div class="cabinet">
+    <div class="bulbs"></div>
+
+    <div class="status-row">
+      <div class="pill"><span>🎟</span> Spins: <b id="spinCount">5</b></div>
+      <div class="pill credits"><span>◆</span> Credits: <b id="creditCount">0</b></div>
+    </div>
+
+    <div class="reels" id="reels">
+      <div class="reel-window"><div class="reel-strip" id="strip0"></div></div>
+      <div class="reel-window"><div class="reel-strip" id="strip1"></div></div>
+      <div class="reel-window"><div class="reel-strip" id="strip2"></div></div>
+    </div>
+    <div class="payline">▸ PAYLINE ◂</div>
+
+    <div class="message" id="message">Pull the lever to play.</div>
+
+    <div class="controls">
+      <button class="spin-btn" id="spinBtn">SPIN</button>
+      <button class="ad-btn" id="adBtn">
+        <span>📺 +3 SPINS</span>
+        <small>watch a sponsor break</small>
+      </button>
+    </div>
+  </div>
+
+  <div class="footnote">Simulated slot machine for entertainment. All symbols, credits, and "ads" here are fictional — this demo has no connection to a real ad network.</div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="ad-card">
+    <div class="tag">Sponsor Break</div>
+    <div class="ad-mock" id="adMock">FRESH MINT GUM</div>
+    <div class="ring-wrap">
+      <svg class="ring" viewBox="0 0 52 52">
+        <circle class="ring-bg" cx="26" cy="26" r="22"></circle>
+        <circle class="ring-fg" id="ringFg" cx="26" cy="26" r="22" stroke-dasharray="138.2" stroke-dashoffset="0"></circle>
+      </svg>
+      <div class="ring-label" id="ringLabel">5</div>
+    </div>
+    <button class="skip-btn" id="skipBtn" disabled>Watching... please wait</button>
+  </div>
+</div>
+
+<script>
+const SYMBOLS = ['🍒','🍋','🔔','⭐','💎','7️⃣','🍇'];
+const PAYOUTS = { '💎':100, '7️⃣':50, '⭐':25, '🔔':15, '🍇':10, '🍋':5, '🍒':5 };
+const SYMBOLS_PER_STRIP = 24; // long strip for spin illusion
+const VISIBLE_SLOT_HEIGHT = 96;
+
+let spins = 5;
+let credits = 0;
+let spinning = false;
+
+const spinCountEl = document.getElementById('spinCount');
+const creditCountEl = document.getElementById('creditCount');
+const messageEl = document.getElementById('message');
+const spinBtn = document.getElementById('spinBtn');
+const adBtn = document.getElementById('adBtn');
+const overlay = document.getElementById('overlay');
+const skipBtn = document.getElementById('skipBtn');
+const ringFg = document.getElementById('ringFg');
+const ringLabel = document.getElementById('ringLabel');
+const adMock = document.getElementById('adMock');
+
+const AD_LINES = ['FRESH MINT GUM', 'MEGA CEREAL CO.', 'ZOOM SNEAKERS', 'GALAXY SODA', 'COMFY NAPS™ PILLOWS'];
+
+function buildStrip(el, finalSymbol){
+  el.innerHTML = '';
+  const arr = [];
+  for(let i=0;i<SYMBOLS_PER_STRIP;i++){
+    arr.push(SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)]);
+  }
+  arr[arr.length-1] = finalSymbol; // land on this one
+  arr.forEach(sym=>{
+    const d = document.createElement('div');
+    d.className='symbol';
+    d.textContent = sym;
+    el.appendChild(d);
+  });
+  el.style.transition = 'none';
+  el.style.transform = 'translateY(0px)';
+}
+
+function spinStripTo(el, delay){
+  const distance = (SYMBOLS_PER_STRIP-1) * VISIBLE_SLOT_HEIGHT;
+  requestAnimationFrame(()=>{
+    setTimeout(()=>{
+      el.style.transition = `transform ${2.2 + delay*0.3}s cubic-bezier(.12,.9,.2,1)`;
+      el.style.transform = `translateY(-${distance}px)`;
+    }, 30);
+  });
+}
+
+function updateUI(){
+  spinCountEl.textContent = spins;
+  creditCountEl.textContent = credits;
+  spinBtn.disabled = spins <= 0 || spinning;
+  spinBtn.textContent = spinning ? 'SPINNING...' : 'SPIN';
+}
+
+function randomSymbol(){
+  return SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
+}
+
+function doSpin(){
+  if(spinning || spins <= 0) return;
+  spinning = true;
+  spins -= 1;
+  updateUI();
+  messageEl.className='message';
+  messageEl.textContent = 'Spinning...';
+
+  // decide outcome with light house edge
+  const roll = Math.random();
+  let result;
+  if(roll < 0.08){
+    // three of a kind
+    const sym = randomSymbol();
+    result = [sym, sym, sym];
+  } else if(roll < 0.28){
+    // two matching
+    const sym = randomSymbol();
+    let other = randomSymbol();
+    while(other === sym) other = randomSymbol();
+    const positions = [0,1,2].sort(()=>Math.random()-0.5);
+    result = [null,null,null];
+    result[positions[0]] = sym;
+    result[positions[1]] = sym;
+    result[positions[2]] = other;
+  } else {
+    result = [randomSymbol(), randomSymbol(), randomSymbol()];
+    // ensure not accidentally all matching
+    if(result[0]===result[1] && result[1]===result[2]){
+      result[2] = randomSymbol()===result[2] ? SYMBOLS[(SYMBOLS.indexOf(result[2])+1)%SYMBOLS.length] : result[2];
+    }
+  }
+
+  const strips = [document.getElementById('strip0'), document.getElementById('strip1'), document.getElementById('strip2')];
+  strips.forEach((s,i)=> buildStrip(s, result[i]));
+  strips.forEach((s,i)=> spinStripTo(s, i));
+
+  setTimeout(()=>{
+    spinning = false;
+    evaluate(result);
+    updateUI();
+  }, 3100);
+}
+
+function evaluate(result){
+  if(result[0]===result[1] && result[1]===result[2]){
+    const win = PAYOUTS[result[0]] || 10;
+    credits += win;
+    messageEl.className = 'message win';
+    messageEl.textContent = `JACKPOT! ${result[0]}${result[0]}${result[0]} — +${win} credits`;
+  } else if(result[0]===result[1] || result[1]===result[2] || result[0]===result[2]){
+    const matchSym = result[0]===result[1] ? result[0] : (result[1]===result[2] ? result[1] : result[0]);
+    const win = Math.ceil((PAYOUTS[matchSym]||5) / 4);
+    credits += win;
+    messageEl.className = 'message win';
+    messageEl.textContent = `Small win — pair of ${matchSym} — +${win} credits`;
+  } else {
+    messageEl.className = 'message lose';
+    messageEl.textContent = 'No match. Try again!';
+  }
+  if(spins <= 0){
+    messageEl.textContent += ' — Out of spins. Watch a sponsor break for more!';
+  }
+}
+
+// --- Ad flow ---
+let adTimer = null;
+const AD_SECONDS = 5;
+const RING_CIRC = 138.2;
+
+function startAd(){
+  overlay.classList.add('show');
+  adMock.textContent = AD_LINES[Math.floor(Math.random()*AD_LINES.length)];
+  skipBtn.disabled = true;
+  skipBtn.textContent = 'Watching... please wait';
+  let remaining = AD_SECONDS;
+  ringLabel.textContent = remaining;
+  ringFg.style.strokeDashoffset = 0;
+
+  adTimer = setInterval(()=>{
+    remaining -= 1;
+    ringLabel.textContent = Math.max(remaining,0);
+    const offset = RING_CIRC * (1 - Math.max(remaining,0)/AD_SECONDS);
+    ringFg.style.strokeDashoffset = offset;
+    if(remaining <= 0){
+      clearInterval(adTimer);
+      skipBtn.disabled = false;
+      skipBtn.textContent = 'Collect +3 Spins';
+    }
+  }, 1000);
+}
+
+adBtn.addEventListener('click', ()=>{
+  if(spinning) return;
+  startAd();
+});
+
+skipBtn.addEventListener('click', ()=>{
+  if(skipBtn.disabled) return;
+  overlay.classList.remove('show');
+  spins += 3;
+  updateUI();
+  messageEl.className = 'message win';
+  messageEl.textContent = 'Sponsor break complete — +3 spins added!';
+});
+
+spinBtn.addEventListener('click', doSpin);
+
+// init strips with idle symbols
+['strip0','strip1','strip2'].forEach(id=> buildStrip(document.getElementById(id), randomSymbol()));
+updateUI();
+</script>
+
+</body>
+</html>
